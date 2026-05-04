@@ -1,0 +1,14 @@
+# .gitignore
+
+# Environnements virtuels
+venv/
+env/
+__pycache__/
+
+# Dossiers de données (Règle d'or : on ne versionne JAMAIS la donnée)
+data/
+*.csv
+*.parquet
+
+# Fichiers d'environnement locaux (Sécurité des mots de passe/clés)
+.env
