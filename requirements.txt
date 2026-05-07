@@ -1,3 +1,6 @@
 pandas
 pyarrow
 requests
+psycopg2-binary
+SQLAlchemy
+

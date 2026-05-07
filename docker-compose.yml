@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # MACHINE 1 : La Base de Données (PostgreSQL)
+  # ==========================================
+  db_postgres:
+    image: postgres:15
+    container_name: bdd_fraude
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: password_secret_123
+      POSTGRES_DB: alertes_crypto
+    ports:
+      - "5433:5433"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Rend la base immortelle
+
+  # ==========================================
+  # MACHINE 2 : Notre Moteur ETL Python
+  # ==========================================
+  etl_moteur:
+    build: . # Demande à Docker de lire notre Dockerfile
+    container_name: detecteur_binance_v2
+    depends_on:
+      - db_postgres # Règle stricte : Ne démarre pas si la BDD est éteinte
+    environment:
+      - INTERVALLE_SECONDES=10
+      - SEUIL_BALEINE=0.5
+      - DB_HOST=db_postgres # Magie Docker : le nom du conteneur devient son adresse IP !
+      - DB_USER=admin
+      - DB_PASS=password_secret_123
+      - DB_NAME=alertes_crypto
+    volumes:
+      - ./data:/app/data
+
+# On déclare le disque dur virtuel pour la base de données
+volumes:
+  postgres_data:
