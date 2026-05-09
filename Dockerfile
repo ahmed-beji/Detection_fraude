@@ -7,11 +7,11 @@ WORKDIR /app
 # ==========================================
 # 3. OPTIMISATION DU CACHE (La signature du Pro)
 # ==========================================
-# On copie d'abord UNIQUEMENT le requirements.txt. 
+# On copie d'abord UNIQUEMENT le pyproject.toml. 
 # Pourquoi ? Parce que si on modifie notre code Python plus tard, 
 # Docker n'aura pas à retélécharger toutes les librairies Pandas/Requests.
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml .
+RUN pip install --no-cache-dir .
 
 # ==========================================
 # 4. COPIE DU CODE SOURCE
