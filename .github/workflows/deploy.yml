@@ -42,7 +42,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd Detection_fraude
-            git config --global --add safe.directory Detection_fraude
-            git pull origin main
-            docker-compose up -d --build
+           cd /home/ubuntu/Detection_fraude
+           sudo chown -R ubuntu:ubuntu /home/ubuntu/Detection_fraude
+           git config --global --add safe.directory /home/ubuntu/Detection_fraude
+           git pull origin main
+           docker-compose up -d --build
