@@ -1,5 +1,6 @@
 import pytest
 
+
 @pytest.fixture
 def mock_payload_binance():
     """Fixture contenant des données simulées de l'API Binance pour les tests."""
@@ -10,7 +11,7 @@ def mock_payload_binance():
             "qty": "2.0",
             "time": 1672531200000,
             "isBuyerMaker": True,
-            "isBestMatch": True
+            "isBestMatch": True,
         },
         {
             "id": 1002,
@@ -18,6 +19,6 @@ def mock_payload_binance():
             "qty": "0.5",
             "time": 1672531201000,
             "isBuyerMaker": False,
-            "isBestMatch": True
-        }
+            "isBestMatch": True,
+        },
     ]

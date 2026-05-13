@@ -55,6 +55,7 @@ def sauvegarde_urgence_et_quitter(signum, frame):
         logging.info(f"💾 Sauvegarde d'urgence réussie : {len(df_complet)} transactions archivées.")
     sys.exit(0)
 
+
 def nettoyer_vieux_fichiers():
     maintenant = time.time()
     limite_age = RETENTION_JOURS * 86400
@@ -63,6 +64,7 @@ def nettoyer_vieux_fichiers():
         if os.path.isfile(chemin) and (maintenant - os.path.getctime(chemin)) > limite_age:
             os.remove(chemin)
             logging.info(f"🗑️ Fichier expiré supprimé : {fichier}")
+
 
 def transformer_donnees(donnees_json):
     """Transforme les données brutes de Binance en DataFrame typé et nettoyé."""
@@ -73,16 +75,17 @@ def transformer_donnees(donnees_json):
     df_brut["time"] = pd.to_datetime(df_brut["time"], unit="ms")
     return df_brut[["id", "time", "price", "qty", "montant_usd", "isBuyerMaker"]]
 
+
 # ==========================================
 # 3. LA BOUCLE DE PRODUCTION
 # ==========================================
 def main():
     global buffer_df
-    
+
     # L'écoute des signaux d'arrêt est activée uniquement quand on lance le script en production
     signal.signal(signal.SIGTERM, sauvegarde_urgence_et_quitter)
     signal.signal(signal.SIGINT, sauvegarde_urgence_et_quitter)
-    
+
     while True:
         try:
             url = f"https://api.binance.com/api/v3/trades?symbol={SYMBOLE_CRYPTO}&limit=100"
@@ -101,8 +104,12 @@ def main():
             # --- LOGIQUE MÉTIER & STOCKAGE CHAUD ---
             baleines = df_clean[df_clean["qty"] >= SEUIL_BALEINE]
             if not baleines.empty:
-                baleines.to_sql("table_alertes_baleines", moteur_sql, if_exists="append", index=False)
-                logging.warning(f"🔥 ALERTE : {len(baleines)} baleine(s) injectée(s) dans PostgreSQL !")
+                baleines.to_sql(
+                    "table_alertes_baleines", moteur_sql, if_exists="append", index=False
+                )
+                logging.warning(
+                    f"🔥 ALERTE : {len(baleines)} baleine(s) injectée(s) dans PostgreSQL !"
+                )
 
             # --- MISE EN BUFFER POUR STOCKAGE FROID ---
             buffer_df.append(df_clean)
@@ -111,9 +118,7 @@ def main():
             taille_actuelle_buffer = sum(len(df) for df in buffer_df)
             if taille_actuelle_buffer >= TAILLE_MAX_BUFFER:
                 df_complet = pd.concat(buffer_df, ignore_index=True)
-                fichier_sortie = (
-                    f"{output_dir}/trades_{SYMBOLE_CRYPTO}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.parquet"
-                )
+                fichier_sortie = f"{output_dir}/trades_{SYMBOLE_CRYPTO}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.parquet"
                 df_complet.to_parquet(fichier_sortie, engine="pyarrow")
 
                 logging.info(f"💾 Froid : {len(df_complet)} transactions archivées en Parquet.")
@@ -126,6 +131,7 @@ def main():
             logging.error(f"⚠️ ERREUR DE CYCLE INATTENDUE : {e}")
 
         time.sleep(INTERVALLE_SECONDES)
+
 
 if __name__ == "__main__":
     main()
