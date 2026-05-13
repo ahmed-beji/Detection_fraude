@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main # Le pipeline se lance à chaque push sur la branche main
+  workflow_dispatch: # Permet de lancer le pipeline manuellement depuis l'interface GitHub
 
 jobs:
   lint-et-tests:
@@ -41,6 +42,6 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd projet_fraude_etl
+            cd Detection_fraude
             git pull origin main
             docker-compose up -d --build
