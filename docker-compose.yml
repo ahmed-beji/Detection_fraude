@@ -1,65 +1,77 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # ==========================================
-  # MACHINE 1 : La Base de Données (PostgreSQL)
-  # ==========================================
-  db_postgres:
-    image: postgres:15
-    container_name: bdd_fraude
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "5433:5432" # Map host port 5433 to container port 5432
-    volumes:
-      - postgres_data:/var/lib/postgresql/data # Rend la base immortelle
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-admin} -d ${POSTGRES_DB:-alertes_crypto}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ==========================================
-  # MACHINE 2 : Notre Moteur ETL Python
-  # ==========================================
+  # -----------------------------------------------------------
+  # 1. LE MOTEUR D'EXTRACTION (Celui qui plantait tout à l'heure)
+  # -----------------------------------------------------------
   etl_moteur:
-    build: . # Demande à Docker de lire notre Dockerfile
-    container_name: detecteur_binance_v2
-    depends_on:
-      db_postgres:
-        condition: service_healthy # Règle stricte : Ne démarre que si la BDD est prête
-    environment:
-      - INTERVALLE_SECONDES=${INTERVALLE_SECONDES}
-      - SYMBOLE_CRYPTO=${SYMBOLE_CRYPTO}
-      - SEUIL_BALEINE=${SEUIL_BALEINE}
-      - DB_HOST=db_postgres # Magie Docker : le nom du conteneur devient son adresse IP !
-      - DB_PORT=5432
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASS=${POSTGRES_PASSWORD}
-      - DB_NAME=${POSTGRES_DB}
-    volumes:
-      - ./data:/app/data
+    # REMPLACE "." PAR LE DOSSIER OÙ SE TROUVE TON DOCKERFILE POUR CE SERVICE
+    build: . 
+    container_name: etl_moteur
+    
+    # L'INJECTION DU SECRET (Vital pour ne pas crasher)
+    env_file:
+      - .env
+      
+    # LA RÈGLE DE SURVIE : On redémarre automatiquement si le script plante
+    restart: unless-stopped
+    
+    # LE TEST DE SANTÉ (À adapter selon ton code : ex. ping un port ou vérifier un fichier)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"] # À modifier selon ton app
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # ==========================================
-  # MACHINE 3 : Outil de DataViz (Metabase)
-  # ==========================================
+    # L'OBSERVABILITÉ (Envoi direct vers AWS CloudWatch)
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: eu-west-3
+        awslogs-group: /usine-etl/production
+        awslogs-stream: etl-moteur
+
+  # -----------------------------------------------------------
+  # 2. LE DÉTECTEUR BINANCE (Qui attend que le moteur soit prêt)
+  # -----------------------------------------------------------
+  detecteur_binance_v2:
+    # REMPLACE PAR LE BON DOSSIER
+    build: ./dossier_detecteur 
+    container_name: detecteur_binance_v2
+    
+    env_file:
+      - .env
+      
+    restart: unless-stopped
+    
+    # LA DÉPENDANCE STRICTE : Ne démarre QUE si etl_moteur a réussi son healthcheck
+    depends_on:
+      etl_moteur:
+        condition: service_healthy
+
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: eu-west-3
+        awslogs-group: /usine-etl/production
+        awslogs-stream: detecteur-binance
+
+  # -----------------------------------------------------------
+  # 3. LE TABLEAU DE BORD (Metabase)
+  # -----------------------------------------------------------
   metabase:
-    image: metabase/metabase:latest
-    container_name: metabase_dataviz
+    image: metabase/metabase:latest # On utilise l'image officielle, pas de build
+    container_name: metabase_dashboard
+    
+    # On expose le port 3000 (Celui qu'on a ouvert dans le Security Group Terraform)
     ports:
       - "3000:3000"
-    depends_on:
-      - db_postgres
-    environment:
-      MB_DB_TYPE: postgres
-      MB_DB_DBNAME: ${POSTGRES_DB}
-      MB_DB_PORT: 5432
-      MB_DB_USER: ${POSTGRES_USER}
-      MB_DB_PASS: ${POSTGRES_PASSWORD}
-      MB_DB_HOST: db_postgres
-
-# On déclare le disque dur virtuel pour la base de données
-volumes:
-  postgres_data:
+      
+    restart: unless-stopped
+    
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: eu-west-3
+        awslogs-group: /usine-etl/production
+        awslogs-stream: metabase-ui

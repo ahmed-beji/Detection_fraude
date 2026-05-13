@@ -1,0 +1,46 @@
+name: CI/CD Pipeline ETL Crypto
+
+on:
+  push:
+    branches:
+      - main # Le pipeline se lance à chaque push sur la branche main
+
+jobs:
+  lint-et-tests:
+    name: 🧹 Vérification du code
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Récupération du code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Configuration de Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 📦 Installation des dépendances de dev
+        run: pip install . black pytest
+
+      - name: 🔍 Vérification du formatage (Black)
+        run: black --check src/
+
+      - name: 🧪 Exécution des Tests Unitaires (Pytest)
+        env:
+          PYTHONPATH: .
+        run: pytest tests/
+
+  deploy-aws:
+    name: 🚀 Déploiement sur EC2
+    needs: lint-et-tests # Ne se lance que si la vérification réussit
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🌐 Connexion SSH et Déploiement
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd projet_fraude_etl
+            git pull origin main
+            docker-compose up -d --build

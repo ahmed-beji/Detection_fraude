@@ -3,3 +3,4 @@ pyarrow
 requests
 psycopg2-binary
 SQLAlchemy
+pytest

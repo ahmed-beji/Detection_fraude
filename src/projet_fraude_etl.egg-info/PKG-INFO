@@ -8,3 +8,4 @@ Requires-Dist: pyarrow
 Requires-Dist: requests
 Requires-Dist: psycopg2-binary
 Requires-Dist: SQLAlchemy
+Requires-Dist: pytest

@@ -1,3 +1,4 @@
+README.md
 pyproject.toml
 src/ingestion_api.py
 src/projet_fraude_etl.egg-info/PKG-INFO
@@ -5,3 +6,4 @@ src/projet_fraude_etl.egg-info/SOURCES.txt
 src/projet_fraude_etl.egg-info/dependency_links.txt
 src/projet_fraude_etl.egg-info/requires.txt
 src/projet_fraude_etl.egg-info/top_level.txt
+tests/test_transformation.py
