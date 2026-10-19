@@ -1,13 +1,13 @@
 #  Crypto Whale Detector - Real-Time ETL Pipeline
 
-```markdown
-![CI/CD Pipeline](https://github.com/ahmed-beji/Detection_fraude/actions/workflows/deploy.yml/badge.svg)
+[![CI/CD Pipeline](https://github.com/ahmed-beji/Detection_fraude/actions/workflows/deploy.yml/badge.svg)](https://github.com/ahmed-beji/Detection_fraude/actions)
 [![Python Version](https://img.shields.io/badge/python-3.11-blue.svg)](https://python.org)
 [![Infrastructure](https://img.shields.io/badge/IaC-Terraform-7B42BC.svg)](https://terraform.io)
+
 Ce projet est un pipeline de données (ETL) robuste, asynchrone et conteneurisé. Il est conçu pour ingérer un flux continu de transactions en temps réel depuis l'API WebSocket de Binance, détecter les anomalies financières ("Baleines" - transactions au-dessus d'un seuil critique), et stocker ces données pour une visualisation instantanée.
 
 L'infrastructure est provisionnée dynamiquement sur AWS via Terraform, et le déploiement est automatisé par un pipeline CI/CD GitHub Actions.
-'''
+
 ##  Architecture du Système
 
 L'architecture abandonne les requêtes HTTP synchrones classiques au profit d'une connexion WebSocket pour garantir un véritable temps réel sans subir de limitations d'API (Rate Limits).
@@ -41,34 +41,3 @@ flowchart LR
     classDef docker fill:#2496ED,stroke:#fff,stroke-width:2px,color:white;
     class AWS aws;
     class Docker docker;
-
-##  Structure du Projet
-
-* **`.github/workflows/`** : Pipeline CI/CD (Tests automatiques, Build Docker, Déploiement via AWS OIDC).
-* **`infra/`** : Infrastructure as Code (Terraform) pour provisionner le VPC, les Security Groups et l'instance EC2.
-* **`src/`** : Code applicatif Python (Consommateur WebSocket et connecteur base de données).
-* **`tests/`** : Suite de tests unitaires (Pytest) pour valider la logique de détection des anomalies.
-* **`docker-compose.yml`** : Orchestration locale et de production des conteneurs (App, DB, Dataviz).
-
-## Prérequis
-
-* **Docker** et **Docker Compose**
-* **Terraform** (>= 1.5.0)
-* **Python** (>= 3.11) et `uv` (pour la gestion des dépendances locales)
-* Un compte **AWS** avec accès CLI configuré
-
-## 🛠️ Instructions de Déploiement
-
-### 1. Déploiement Local (Test & Développement)
-
-Clonez le dépôt, configurez vos variables, puis lancez l'orchestrateur Docker :
-
-```bash
-git clone https://github.com/ahmed-beji/Detection_fraude.git
-cd Detection_fraude
-
-# Configuration des variables d'environnement
-cp .env
-
-# Lancement de la stack complète
-docker-compose up -d --build
