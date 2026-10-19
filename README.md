@@ -7,7 +7,7 @@
 Ce projet est un pipeline de données (ETL) robuste, asynchrone et conteneurisé. Il est conçu pour ingérer un flux continu de transactions en temps réel depuis l'API WebSocket de Binance, détecter les anomalies financières ("Baleines" - transactions au-dessus d'un seuil critique), et stocker ces données pour une visualisation instantanée.
 
 L'infrastructure est provisionnée dynamiquement sur AWS via Terraform, et le déploiement est automatisé par un pipeline CI/CD GitHub Actions.
-
+'''
 ##  Architecture du Système
 
 L'architecture abandonne les requêtes HTTP synchrones classiques au profit d'une connexion WebSocket pour garantir un véritable temps réel sans subir de limitations d'API (Rate Limits).
