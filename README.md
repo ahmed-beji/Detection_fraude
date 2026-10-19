@@ -1,8 +1,8 @@
-# 🐋 ETL de Détection d'Anomalies Financières (Temps Réel)
+#  ETL de Détection d'Anomalies Financières (Temps Réel)
 
 Ce projet est un pipeline de données (ETL) robuste et conteneurisé, conçu pour ingérer un flux de transactions en temps réel depuis l'API publique de Binance, appliquer des règles métier de détection d'anomalies ("Baleines"), et stocker l'historique de manière optimisée.
 
-## 🏗️ Architecture du Système
+##  Architecture du Système
 
 - **Extract (Temps Réel) :** Ingestion continue via `requests` sur l'API Binance (Paire BTC/USDT).
 - **Transform (Pandas) :** Nettoyage à la volée, typage strict et calculs de montants en USD.
@@ -11,7 +11,7 @@ Ce projet est un pipeline de données (ETL) robuste et conteneurisé, conçu pou
 - **Dataviz (Metabase) :** Visualisation en temps réel des transactions suspectes ("Baleines") stockées dans la base de données PostgreSQL.
 - **Maintenance (Auto-nettoyage) :** Rétention automatique des fichiers pour éviter la saturation du disque (Data Lifecycle Management).
 
-## 📂 Structure du Projet
+##  Structure du Projet
 ```text
 projet_fraude_etl/
 ├── src/

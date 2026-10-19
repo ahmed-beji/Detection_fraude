@@ -121,7 +121,7 @@ def main():
                 fichier_sortie = f"{output_dir}/trades_{SYMBOLE_CRYPTO}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.parquet"
                 df_complet.to_parquet(fichier_sortie, engine="pyarrow")
 
-                logging.info(f"💾 Froid : {len(df_complet)} transactions archivées en Parquet.")
+                logging.info(f"Froid : {len(df_complet)} transactions archivées en Parquet.")
                 buffer_df = []  # On vide le buffer
                 nettoyer_vieux_fichiers()
 
