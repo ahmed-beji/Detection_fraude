@@ -1,49 +1,37 @@
-name: CI/CD Pipeline ETL Crypto
-
-on:
-  push:
-    branches:
-      - main # Le pipeline se lance à chaque push sur la branche main
-  workflow_dispatch: # Permet de lancer le pipeline manuellement depuis l'interface GitHub
-
-jobs:
-  lint-et-tests:
-    name: 🧹 Vérification du code
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Récupération du code
-        uses: actions/checkout@v3
-
-      - name: 🐍 Configuration de Python 3.9
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-
-      - name: 📦 Installation des dépendances de dev
-        run: pip install . black pytest
-
-      - name: 🔍 Vérification du formatage (Black)
-        run: black --check src/
-
-      - name: 🧪 Exécution des Tests Unitaires (Pytest)
-        env:
-          PYTHONPATH: .
-        run: pytest tests/
-
-  deploy-aws:
+deploy-aws:
     name: 🚀 Déploiement sur EC2
-    needs: lint-et-tests # Ne se lance que si la vérification réussit
+    needs: lint-et-tests
     runs-on: ubuntu-latest
     steps:
       - name: 🌐 Connexion SSH et Déploiement
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DB_USER,DB_PASSWORD,DB_NAME
           script: |
+           # 1. Clonage la première fois, ou simple déplacement
+           if [ ! -d "/home/ubuntu/Detection_fraude" ]; then
+             git clone https://github.com/ahmed-beji/Detection_fraude.git /home/ubuntu/Detection_fraude
+           fi
+           
            cd /home/ubuntu/Detection_fraude
            sudo chown -R ubuntu:ubuntu /home/ubuntu/Detection_fraude
            git config --global --add safe.directory /home/ubuntu/Detection_fraude
+           
+           # 2. Mise à jour du code
            git pull origin main
-           docker-compose up -d --build
+           
+           # 3. Création du fichier .env pour que PostgreSQL puisse démarrer
+           echo "DB_USER=$DB_USER" > .env
+           echo "DB_PASSWORD=$DB_PASSWORD" >> .env
+           echo "DB_NAME=$DB_NAME" >> .env
+           echo "WHALE_THRESHOLD=50000.0" >> .env
+           
+           # 4. Lancement de l'architecture (Attention : espace, pas de tiret)
+           docker compose up -d --build
