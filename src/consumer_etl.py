@@ -20,25 +20,24 @@ DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
 # Établissement de la connexion persistante
 try:
     db_conn = psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        dbname=DB_NAME,
-        user=DB_USER,
-        password=DB_PASSWORD
+        host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASSWORD
     )
     db_cursor = db_conn.cursor()
     print("🟢 Connecté à PostgreSQL avec succès.")
 except Exception as e:
     print(f"🔴 Échec critique de connexion à PostgreSQL : {e}")
-    exit(1) # Si la DB n'est pas là, le conteneur doit crasher pour que Docker le redémarre
+    exit(1)  # Si la DB n'est pas là, le conteneur doit crasher pour que Docker le redémarre
 
-consumer = Consumer({
-    'bootstrap.servers': KAFKA_BROKER,
-    'group.id': GROUP_ID,
-    'auto.offset.reset': 'earliest',
-    'enable.auto.commit': False 
-})
+consumer = Consumer(
+    {
+        "bootstrap.servers": KAFKA_BROKER,
+        "group.id": GROUP_ID,
+        "auto.offset.reset": "earliest",
+        "enable.auto.commit": False,
+    }
+)
 consumer.subscribe([TOPIC_NAME])
+
 
 def insert_into_postgres(whale_data):
     """Insère la transaction et valide l'opération."""
@@ -47,51 +46,57 @@ def insert_into_postgres(whale_data):
         VALUES (%s, %s, %s, %s)
     """
     try:
-        db_cursor.execute(query, (
-            whale_data["timestamp"], 
-            whale_data["price"], 
-            whale_data["quantity"], 
-            whale_data["value_usdt"]
-        ))
-        db_conn.commit() # Validation transactionnelle côté base de données
+        db_cursor.execute(
+            query,
+            (
+                whale_data["timestamp"],
+                whale_data["price"],
+                whale_data["quantity"],
+                whale_data["value_usdt"],
+            ),
+        )
+        db_conn.commit()  # Validation transactionnelle côté base de données
     except Exception as e:
-        db_conn.rollback() # Annulation en cas d'erreur pour ne pas bloquer la connexion
+        db_conn.rollback()  # Annulation en cas d'erreur pour ne pas bloquer la connexion
         print(f"❌ Erreur d'insertion SQL : {e}")
-        raise e # On relance l'erreur pour empêcher le commit Kafka
+        raise e  # On relance l'erreur pour empêcher le commit Kafka
+
 
 try:
     print(f"🎧 En écoute sur le topic '{TOPIC_NAME}' (Seuil : {WHALE_THRESHOLD}$)...")
-    
+
     while True:
         msg = consumer.poll(1.0)
-        if msg is None: continue
+        if msg is None:
+            continue
         if msg.error():
-            if msg.error().code() == KafkaError._PARTITION_EOF: continue
+            if msg.error().code() == KafkaError._PARTITION_EOF:
+                continue
             print(f"⚠️ Erreur Broker : {msg.error()}")
             break
 
         try:
-            raw_data = json.loads(msg.value().decode('utf-8'))
-            price, quantity = float(raw_data['p']), float(raw_data['q'])
+            raw_data = json.loads(msg.value().decode("utf-8"))
+            price, quantity = float(raw_data["p"]), float(raw_data["q"])
             trade_value = price * quantity
 
             if trade_value >= WHALE_THRESHOLD:
                 whale_record = {
-                    "timestamp": int(raw_data['T']),
+                    "timestamp": int(raw_data["T"]),
                     "price": price,
                     "quantity": quantity,
-                    "value_usdt": trade_value
+                    "value_usdt": trade_value,
                 }
-                
+
                 # Étape 1 : Sauvegarde en Base de Données
                 insert_into_postgres(whale_record)
-                
+
                 # Étape 2 : Confirmation à Kafka (Seulement si l'Étape 1 réussit)
                 consumer.commit(asynchronous=False)
                 print(f"🐳 BALEINE ENREGISTRÉE : {trade_value:,.2f} $")
 
         except json.JSONDecodeError:
-            pass # Ignorer silencieusement les données corrompues
+            pass  # Ignorer silencieusement les données corrompues
 
 except KeyboardInterrupt:
     print("🔴 Interruption manuelle demandée.")
