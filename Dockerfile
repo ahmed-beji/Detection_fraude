@@ -1,29 +1,48 @@
-# 1. L'OS de base : Un Linux minimaliste avec Python 3.9
-FROM python:3.9-slim
+# ==========================================
+# 1. L'OS de base : Aligné avec votre CI/CD (Python 3.11)
+# ==========================================
+FROM python:3.11-slim
 
+# Empêche Python de créer des fichiers .pyc (gain d'espace) 
+# et force l'affichage immédiat des logs dans la console Docker
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# ==========================================
 # 2. On définit notre dossier de travail dans le conteneur
+# ==========================================
 WORKDIR /app
 
 # ==========================================
-# 3. OPTIMISATION DU CACHE (La signature du Pro)
+# 3. DÉPENDANCES SYSTÈME (Crucial pour Kafka et Postgres)
 # ==========================================
-# On copie d'abord UNIQUEMENT le pyproject.toml. 
-# Pourquoi ? Parce que si on modifie notre code Python plus tard, 
-# Docker n'aura pas à retélécharger toutes les librairies Pandas/Requests.
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# ==========================================
+# 4. OPTIMISATION DU CACHE (Dépendances Python)
+# ==========================================
+# On copie uniquement la définition des paquets en premier
 COPY pyproject.toml .
 RUN pip install --no-cache-dir .
 
 # ==========================================
-# 4. COPIE DU CODE SOURCE
+# 5. COPIE DU CODE SOURCE
 # ==========================================
-# On copie notre dossier "src" local vers le dossier "src" du conteneur
 COPY src/ src/
 
-# (Note : On ne copie PAS le dossier "data". La donnée ne doit pas être 
-# figée dans l'image, elle sera connectée de l'extérieur via un Volume -v)
+# ==========================================
+# 6. SÉCURITÉ : UTILISATEUR NON-ROOT (Standard DevOps)
+# ==========================================
+RUN useradd -m appuser && chown -R appuser /app
+USER appuser
 
 # ==========================================
-# 5. LA COMMANDE D'ALLUMAGE
+# 7. LA COMMANDE D'ALLUMAGE (Neutre)
 # ==========================================
-# Ce que la machine doit faire quand on appuie sur le bouton "ON"
-CMD ["python3", "src/ingestion_api.py"]
+# On ne met plus de fichier spécifique ici. 
+# C'est le docker-compose.yml qui dira à un conteneur de lancer le Producer 
+# et à l'autre de lancer le Consumer via la directive "command:".
+CMD ["python", "--version"]

@@ -11,4 +11,7 @@ data/
 *.parquet
 
 # Fichiers d'environnement locaux (Sécurité des mots de passe/clés)
-.env
+.envinfra/.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl

@@ -2,76 +2,78 @@ version: "3.8"
 
 services:
   # -----------------------------------------------------------
-  # 1. LE MOTEUR D'EXTRACTION (Celui qui plantait tout à l'heure)
+  # 1. LE BROKER DE MESSAGING (Le cœur du système, remplace la base pour le flux)
   # -----------------------------------------------------------
-  etl_moteur:
-    # REMPLACE "." PAR LE DOSSIER OÙ SE TROUVE TON DOCKERFILE POUR CE SERVICE
-    build: . 
-    container_name: etl_moteur
-    
-    # L'INJECTION DU SECRET (Vital pour ne pas crasher)
-    env_file:
-      - .env
-      
-    # LA RÈGLE DE SURVIE : On redémarre automatiquement si le script plante
-    restart: unless-stopped
-    
-    # LE TEST DE SANTÉ (À adapter selon ton code : ex. ping un port ou vérifier un fichier)
+  redpanda:
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    container_name: redpanda
+    command:
+      - redpanda
+      - start
+      - --smp 1  # Limite à 1 coeur CPU (Crucial pour EC2 t2.micro)
+      - --memory 512M  # Limite stricte de RAM
+      - --reserve-memory 0M
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+    ports:
+      - "19092:19092" # Port d'accès depuis votre machine locale
+      - "9092:9092"   # Port d'accès interne pour les autres conteneurs Docker
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"] # À modifier selon ton app
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-    # L'OBSERVABILITÉ (Envoi direct vers AWS CloudWatch)
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: eu-west-3
-        awslogs-group: /usine-etl/production
-        awslogs-stream: etl-moteur
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy|Unhealthy' || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
 
   # -----------------------------------------------------------
-  # 2. LE DÉTECTEUR BINANCE (Qui attend que le moteur soit prêt)
+  # 2. L'OBSERVABILITÉ KAFKA (Pour votre démonstration portfolio)
+  # -----------------------------------------------------------
+  redpanda-console:
+    image: docker.redpanda.com/redpandadata/console:latest
+    container_name: redpanda_console
+    ports:
+      - "8080:8080" # Accessible sur http://localhost:8080
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # -----------------------------------------------------------
+  # 3. LE PRODUCTEUR (Se connecte à Binance et pousse dans Redpanda)
   # -----------------------------------------------------------
   detecteur_binance_v2:
-    # REMPLACE PAR LE BON DOSSIER
     build: . 
-    container_name: detecteur_binance_v2
-    
+    container_name: producteur_binance
     env_file:
       - .env
-      
     restart: unless-stopped
-    
-    # LA DÉPENDANCE STRICTE : Ne démarre QUE si etl_moteur a réussi son healthcheck
     depends_on:
-      etl_moteur:
+      redpanda:
+        condition: service_healthy # Le script attend que le broker soit prêt
+
+  # -----------------------------------------------------------
+  # 4. LE CONSOMMATEUR (Lit Redpanda, détecte les baleines, écrit en DB)
+  # -----------------------------------------------------------
+  etl_moteur:
+    build: . 
+    container_name: consommateur_etl
+    env_file:
+      - .env
+    restart: unless-stopped
+    depends_on:
+      redpanda:
         condition: service_healthy
 
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: eu-west-3
-        awslogs-group: /usine-etl/production
-        awslogs-stream: detecteur-binance
-
   # -----------------------------------------------------------
-  # 3. LE TABLEAU DE BORD (Metabase)
+  # 5. LE TABLEAU DE BORD (Metabase)
   # -----------------------------------------------------------
   metabase:
-    image: metabase/metabase:latest # On utilise l'image officielle, pas de build
+    image: metabase/metabase:latest
     container_name: metabase_dashboard
-    
-    # On expose le port 3000 (Celui qu'on a ouvert dans le Security Group Terraform)
     ports:
       - "3000:3000"
-      
     restart: unless-stopped
-    
-    logging:
-      driver: awslogs
-      options:
-        awslogs-region: eu-west-3
-        awslogs-group: /usine-etl/production
-        awslogs-stream: metabase-ui
