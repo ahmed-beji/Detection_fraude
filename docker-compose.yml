@@ -70,7 +70,7 @@ services:
     build: . 
     container_name: producteur_binance
     # CRITIQUE : Instruction pour exécuter le bon script
-    command: ["python", "src/producer_binance.py"]
+    command: python src/producer_binance.py
     env_file:
       - .env
     restart: unless-stopped
