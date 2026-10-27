@@ -26,13 +26,8 @@ RUN apt-get update && apt-get install -y \
 # ==========================================
 # On copie uniquement la définition des paquets en premier
 COPY pyproject.toml .
-RUN pip install --no-cache-dir .
-
-# ==========================================
-# 5. COPIE DU CODE SOURCE
-# ==========================================
 COPY src/ src/
-
+RUN pip install --no-cache-dir .
 # ==========================================
 # 6. SÉCURITÉ : UTILISATEUR NON-ROOT (Standard DevOps)
 # ==========================================
