@@ -1,20 +1,19 @@
 [project]
 name = "projet-fraude-etl"
-version = "0.1.0"
-description = "Moteur ETL Hybride - Détection d'Anomalies Crypto Temps Réel"
-requires-python = ">=3.9"
+version = "0.2.0"
+description = "Pipeline ETL Streaming - Détection d'Anomalies Crypto Temps Réel via Redpanda"
+requires-python = ">=3.11"
 dependencies = [
-    "pandas",
+    "confluent-kafka==2.3.0",
+    "websocket-client==1.7.0",
+    "psycopg2-binary==2.9.9",
     "pyarrow",
-    "requests",
-    "psycopg2-binary",
-    "SQLAlchemy",
     "pytest"
 ]
 
 [tool.black]
 line-length = 100
-target-version = ['py39']
+target-version = ['py311']
 include = '\.pyi?$'
 
 [build-system]

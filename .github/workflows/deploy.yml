@@ -46,6 +46,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: DB_USER,DB_PASSWORD,DB_NAME
+          command_timeout: 60m
           script: |
             if [ ! -d "/home/ubuntu/Detection_fraude" ]; then
               git clone https://github.com/ahmed-beji/Detection_fraude.git /home/ubuntu/Detection_fraude
