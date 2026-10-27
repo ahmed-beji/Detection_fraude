@@ -72,6 +72,12 @@ try:
         if msg.error():
             if msg.error().code() == KafkaError._PARTITION_EOF:
                 continue
+            elif msg.error().code() == KafkaError.UNKNOWN_TOPIC_OR_PART:
+                # Le topic n'existe pas encore, on patiente 2 secondes
+                import time
+                time.sleep(2)
+                continue
+            
             print(f"⚠️ Erreur Broker : {msg.error()}")
             break
 
